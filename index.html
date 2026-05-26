@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevOps Monitor</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="topbar">
+        <div class="brand">
+          <div class="mark">OP</div>
+          <div>
+            <h1>运维监控面板</h1>
+            <div class="sub"><span id="hostname">等待连接</span></div>
+          </div>
+        </div>
+        <nav class="nav" aria-label="主菜单">
+          <button type="button" class="active" data-view="ops">运维监控</button>
+          <button type="button" data-view="budget">预算费用</button>
+        </nav>
+        <div class="actions">
+          <div class="pill"><span class="dot"></span><span id="updated">未连接</span></div>
+          <button type="button" id="settingsButton">设置</button>
+          <button type="button" id="logoutButton">退出</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="loginPanel" class="login-panel">
+        <form id="loginForm" class="login-card">
+          <h2>登录监控后端</h2>
+          <label for="username">用户名</label>
+          <input id="username" name="username" type="email" autocomplete="username" required>
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+          <button type="submit">登录</button>
+          <div class="form-note" id="loginMessage"></div>
+        </form>
+      </section>
+
+      <section id="appPanel" class="app-panel hidden">
+        <section id="viewOps" class="view active">
+          <section class="grid kpis">
+            <article class="card"><div class="metric-label">CPU</div><div class="metric-value" id="cpuValue">--</div><div class="metric-foot" id="cpuFoot">--</div></article>
+            <article class="card"><div class="metric-label">内存</div><div class="metric-value" id="memValue">--</div><div class="metric-foot" id="memFoot">--</div></article>
+            <article class="card"><div class="metric-label">存储峰值</div><div class="metric-value" id="diskValue">--</div><div class="metric-foot" id="diskFoot">--</div></article>
+            <article class="card"><div class="metric-label">实时带宽</div><div class="metric-value" id="netValue">--</div><div class="metric-foot" id="netFoot">--</div></article>
+            <article class="card"><div class="metric-label">本月累计流量</div><div class="metric-value" id="monthlyTrafficValue">--</div><div class="metric-foot" id="monthlyTrafficFoot">--</div></article>
+            <article class="card"><div class="metric-label">安全连接</div><div class="metric-value" id="safeValue">--</div><div class="metric-foot">非风险远端连接</div></article>
+            <article class="card"><div class="metric-label">风险连接</div><div class="metric-value" id="riskValue">--</div><div class="metric-foot">敏感端口/异常来源</div></article>
+          </section>
+
+          <section class="grid two">
+            <article class="card">
+              <div class="section-title"><h2>资源使用</h2><span class="badge info" id="uptime">--</span></div>
+              <div class="stack" id="resourceRows"></div>
+            </article>
+            <article class="card">
+              <div class="section-title"><h2>扩容建议</h2><span class="badge violet" id="bandwidthBase">--</span></div>
+              <div class="recommendations" id="recommendations"></div>
+            </article>
+          </section>
+
+          <section class="grid three">
+            <article class="card">
+              <div class="section-title"><h2>服务可用性</h2><span class="badge" id="svcSummary">--</span></div>
+              <div id="services"></div>
+            </article>
+            <article class="card">
+              <div class="section-title"><h2>网络接口</h2><span class="badge info" id="trafficPlan">--</span></div>
+              <div id="network"></div>
+            </article>
+            <article class="card">
+              <div class="section-title"><h2>监听与风险连接</h2><span class="badge" id="connSummary">--</span></div>
+              <div id="connections"></div>
+            </article>
+          </section>
+        </section>
+
+        <section id="viewBudget" class="view">
+          <section class="grid budget-kpis">
+            <article class="card"><div class="metric-label">今日费用</div><div class="metric-value" id="budgetToday">--</div><div class="metric-foot">按当前实例运行估算</div></article>
+            <article class="card"><div class="metric-label">本月累计</div><div class="metric-value" id="budgetMtd">--</div><div class="metric-foot" id="budgetMtdFoot">--</div></article>
+            <article class="card"><div class="metric-label">月底预测</div><div class="metric-value" id="budgetProjected">--</div><div class="metric-foot">继续运行到月底</div></article>
+            <article class="card"><div class="metric-label">预算占用</div><div class="metric-value" id="budgetUsage">--</div><div class="metric-foot" id="budgetRemaining">--</div></article>
+            <article class="card"><div class="metric-label">免费流量剩余</div><div class="metric-value" id="freeTraffic">--</div><div class="metric-foot" id="freeTrafficFoot">每月前 100 GB 免费</div></article>
+          </section>
+
+          <section class="grid two">
+            <article class="card">
+              <div class="section-title"><h2>费用统计表</h2><span class="badge" id="budgetBadge">--</span></div>
+              <div id="budgetTable"></div>
+            </article>
+            <article class="card">
+              <div class="section-title"><h2>当前实例</h2><span class="badge info" id="pricingSource">--</span></div>
+              <div class="facts" id="instanceFacts"></div>
+            </article>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="settings-card">
+      <h2>后端地址</h2>
+      <label for="apiBase">API Base URL</label>
+      <input id="apiBase" name="apiBase" type="url" placeholder="https://example.trycloudflare.com" required>
+      <div class="form-note">没有域名时，Cloudflare Quick Tunnel 地址重启后可能变化，可以在这里更新。</div>
+      <div class="dialog-actions">
+        <button value="cancel" type="submit">取消</button>
+        <button id="saveSettings" value="default" type="button">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
