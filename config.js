@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://promotion-unlikely-smoke-authorization.trycloudflare.com"
+  defaultApiBase: "https://yoga-agenda-thehun-granny.trycloudflare.com"
 };
