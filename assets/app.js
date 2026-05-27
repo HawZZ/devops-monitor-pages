@@ -1,8 +1,10 @@
 const fmt = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1 });
 const fmt2 = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
 const usdFmt = new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const defaultApiBase = normalizeBase((window.MONITOR_CONFIG && window.MONITOR_CONFIG.defaultApiBase) || '');
+let defaultApiBase = normalizeBase((window.MONITOR_CONFIG && window.MONITOR_CONFIG.defaultApiBase) || '');
 const apiBaseKey = 'devops-monitor-api-base';
+const apiBaseManualKey = 'devops-monitor-api-base-manual';
+const tokenKey = 'devops-monitor-token';
 let refreshTimer = null;
 
 function normalizeBase(value) {
@@ -10,7 +12,10 @@ function normalizeBase(value) {
 }
 
 function apiBase() {
-  return normalizeBase(localStorage.getItem(apiBaseKey) || defaultApiBase);
+  if (localStorage.getItem(apiBaseManualKey) === '1') {
+    return normalizeBase(localStorage.getItem(apiBaseKey) || defaultApiBase);
+  }
+  return defaultApiBase;
 }
 
 function apiUrl(path) {
@@ -18,17 +23,21 @@ function apiUrl(path) {
 }
 
 async function fetchApi(path, options = {}, retryDefault = true) {
+  const token = sessionStorage.getItem(tokenKey);
+  const headers = {
+    ...(options.headers || {})
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
   try {
     return await fetch(apiUrl(path), {
       ...options,
       credentials: 'include',
-      headers: {
-        ...(options.headers || {})
-      }
+      headers
     });
   } catch (error) {
     const storedBase = normalizeBase(localStorage.getItem(apiBaseKey) || '');
-    if (retryDefault && storedBase && defaultApiBase && storedBase !== defaultApiBase) {
+    if (retryDefault && localStorage.getItem(apiBaseManualKey) === '1' && storedBase && defaultApiBase && storedBase !== defaultApiBase) {
+      localStorage.removeItem(apiBaseManualKey);
       localStorage.removeItem(apiBaseKey);
       return fetchApi(path, options, false);
     }
@@ -148,11 +157,14 @@ async function login(event) {
     showLogin(message);
     return;
   }
+  const data = await response.json();
+  if (data.token) sessionStorage.setItem(tokenKey, data.token);
   showApp();
   await load();
 }
 
 async function logout() {
+  sessionStorage.removeItem(tokenKey);
   try {
     await apiFetch('/monitor/api/logout', { method: 'POST' });
   } catch (_) {
@@ -287,8 +299,27 @@ function saveSettings() {
   const raw = document.getElementById('apiBase').value.trim().replace(/\/+$/, '');
   if (!raw) return;
   localStorage.setItem(apiBaseKey, raw);
+  localStorage.setItem(apiBaseManualKey, '1');
   document.getElementById('settingsDialog').close();
   showLogin('后端地址已更新，请重新登录。');
+}
+
+async function loadRuntimeConfig() {
+  try {
+    const response = await fetch(`config.json?ts=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const config = await response.json();
+    if (config.defaultApiBase) defaultApiBase = normalizeBase(config.defaultApiBase);
+  } catch (_) {
+    // config.js remains the fallback.
+  }
+}
+
+async function init() {
+  await loadRuntimeConfig();
+  setView(location.hash === '#budget' ? 'budget' : 'ops');
+  await load();
+  refreshTimer = setInterval(load, 5000);
 }
 
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => setView(button.dataset.view)));
@@ -296,6 +327,4 @@ document.getElementById('loginForm').addEventListener('submit', login);
 document.getElementById('logoutButton').addEventListener('click', logout);
 document.getElementById('settingsButton').addEventListener('click', openSettings);
 document.getElementById('saveSettings').addEventListener('click', saveSettings);
-setView(location.hash === '#budget' ? 'budget' : 'ops');
-load();
-refreshTimer = setInterval(load, 5000);
+init();
