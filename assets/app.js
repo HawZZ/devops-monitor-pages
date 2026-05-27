@@ -1,16 +1,39 @@
 const fmt = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1 });
 const fmt2 = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
 const usdFmt = new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const defaultApiBase = (window.MONITOR_CONFIG && window.MONITOR_CONFIG.defaultApiBase) || '';
+const defaultApiBase = normalizeBase((window.MONITOR_CONFIG && window.MONITOR_CONFIG.defaultApiBase) || '');
 const apiBaseKey = 'devops-monitor-api-base';
 let refreshTimer = null;
 
+function normalizeBase(value) {
+  return (value || '').trim().replace(/\/+$/, '');
+}
+
 function apiBase() {
-  return (localStorage.getItem(apiBaseKey) || defaultApiBase).replace(/\/+$/, '');
+  return normalizeBase(localStorage.getItem(apiBaseKey) || defaultApiBase);
 }
 
 function apiUrl(path) {
   return `${apiBase()}${path}`;
+}
+
+async function fetchApi(path, options = {}, retryDefault = true) {
+  try {
+    return await fetch(apiUrl(path), {
+      ...options,
+      credentials: 'include',
+      headers: {
+        ...(options.headers || {})
+      }
+    });
+  } catch (error) {
+    const storedBase = normalizeBase(localStorage.getItem(apiBaseKey) || '');
+    if (retryDefault && storedBase && defaultApiBase && storedBase !== defaultApiBase) {
+      localStorage.removeItem(apiBaseKey);
+      return fetchApi(path, options, false);
+    }
+    throw error;
+  }
 }
 
 function setText(id, text) {
@@ -92,13 +115,7 @@ function setView(view) {
 }
 
 async function apiFetch(path, options = {}) {
-  const response = await fetch(apiUrl(path), {
-    ...options,
-    credentials: 'include',
-    headers: {
-      ...(options.headers || {})
-    }
-  });
+  const response = await fetchApi(path, options);
   if (response.status === 401) {
     showLogin('请登录后访问监控数据。');
     throw new Error('unauthorized');
@@ -114,12 +131,18 @@ async function login(event) {
     password: form.get('password')
   });
   setText('loginMessage', '正在登录...');
-  const response = await fetch(apiUrl('/monitor/api/login'), {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
-  });
+  let response;
+  try {
+    response = await fetchApi('/monitor/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+  } catch (error) {
+    showLogin(`无法连接后端：${error.message}`);
+    setText('updated', '连接失败');
+    return;
+  }
   if (!response.ok) {
     const message = response.status === 429 ? '失败次数过多，请稍后再试。' : '账号或密码不正确。';
     showLogin(message);
