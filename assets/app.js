@@ -181,31 +181,34 @@ function renderBudget(budget, traffic) {
   setText('budgetMtd', usd(summary.month_to_date_usd));
   setText('budgetMtdFoot', `${budget.period.month_running_hours} 小时`);
   setText('budgetProjected', usd(summary.projected_month_usd));
-  setText('budgetUsage', summary.monthly_budget_usd ? pct(summary.budget_usage_percent) : '--');
-  setText('budgetRemaining', summary.monthly_budget_usd ? `${usd(summary.budget_remaining_usd)} 剩余 / ${usd(summary.monthly_budget_usd)} 预算` : '未设置月预算');
+  setText('budgetRunRate', usd(summary.normalized_30d_usd));
+  setText('budgetUsage', summary.monthly_budget_usd ? pct(summary.normalized_30d_budget_usage_percent) : '--');
+  setText('budgetRemaining', summary.monthly_budget_usd ? `${usd(summary.normalized_30d_budget_remaining_usd)} 剩余 / ${usd(summary.monthly_budget_usd)} 预算` : '未设置月预算');
   setText('freeTraffic', `${fmt2.format(traffic.free_remaining_gb)} GB`);
   setText('freeTrafficFoot', `本月出站 ${fmt2.format(traffic.sent_gb)} / ${fmt2.format(traffic.free_gb)} GB`);
   badge(
     document.getElementById('budgetBadge'),
-    !summary.monthly_budget_usd ? 'info' : summary.budget_usage_percent >= 100 ? 'bad' : summary.budget_usage_percent >= 80 ? 'warn' : 'ok',
+    !summary.monthly_budget_usd ? 'info' : summary.normalized_30d_budget_usage_percent >= 100 ? 'bad' : summary.normalized_30d_budget_usage_percent >= 80 ? 'warn' : 'ok',
     summary.monthly_budget_usd ? `${usd(summary.monthly_budget_usd)} 月预算` : '未设预算'
   );
   setText('pricingSource', pricing.source);
 
   const costRows = budget.rows.map(row =>
-    `<tr><td>${row.item}<br><span class="mini">${row.note}</span></td><td>${row.basis}<br><span class="mini">${row.usage}</span></td><td>${usd(row.month_to_date_usd)}</td><td>${usd(row.projected_month_usd)}</td></tr>`
+    `<tr><td>${row.item}<br><span class="mini">${row.note}</span></td><td>${row.basis}<br><span class="mini">${row.usage}</span></td><td>${usd(row.month_to_date_usd)}</td><td>${usd(row.projected_month_usd)}</td><td>${usd(row.normalized_30d_usd)}</td></tr>`
   );
-  document.getElementById('budgetTable').innerHTML = renderTable(['项目', '计费依据', '本月累计', '月底预测'], costRows);
+  document.getElementById('budgetTable').innerHTML = renderTable(['项目', '计费依据', '本月累计', '月底预测', '30天预测'], costRows);
 
   const facts = [
     ['实例 ID', instance.instance_id],
     ['实例规格', instance.instance_type],
     ['区域 / 可用区', `${instance.region} / ${instance.availability_zone}`],
     ['内网 IP', instance.private_ip],
+    ['公网 IP', instance.public_ip || '--'],
     ['启动时间', instance.launched_at ? new Date(instance.launched_at).toLocaleString('zh-CN') : '--'],
     ['已运行', `${instance.running_hours} 小时`],
     ['计算单价', `${usd(pricing.instance_hourly_usd)} / 小时`],
     ['存储单价', `${usd(pricing.storage_gb_month_usd)} / GB-月`],
+    ['公网 IPv4 单价', `${usd(pricing.public_ipv4_hourly_usd)} / 小时`],
     ['流量规则', `${pricing.data_transfer_free_gb} GB 免费后 ${usd(pricing.data_transfer_gb_usd)} / GB`],
     ['本月累计流量', `${fmt2.format(traffic.total_gb)} GB`],
     ['本月出站流量', `${fmt2.format(traffic.sent_gb)} GB`],
