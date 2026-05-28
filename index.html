@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DevOps Monitor</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260528031944">
+  <link rel="stylesheet" href="assets/styles.css?v=20260528043000">
 </head>
 <body>
   <div class="shell">
@@ -83,12 +83,12 @@
 
         <section id="viewBudget" class="view">
           <section class="grid budget-kpis">
-            <article class="card"><div class="metric-label">今日费用</div><div class="metric-value" id="budgetToday">--</div><div class="metric-foot">按当前实例运行估算</div></article>
+            <article class="card"><div class="metric-label">今日费用</div><div class="metric-value" id="budgetToday">--</div><div class="metric-foot">按当前计费模式估算</div></article>
             <article class="card"><div class="metric-label">本月累计</div><div class="metric-value" id="budgetMtd">--</div><div class="metric-foot" id="budgetMtdFoot">--</div></article>
             <article class="card"><div class="metric-label">月底预测</div><div class="metric-value" id="budgetProjected">--</div><div class="metric-foot">继续运行到月底</div></article>
-            <article class="card"><div class="metric-label">30天运行预测</div><div class="metric-value" id="budgetRunRate">--</div><div class="metric-foot">对应 Amazon Q 月化口径</div></article>
+            <article class="card"><div class="metric-label">30天运行预测</div><div class="metric-value" id="budgetRunRate">--</div><div class="metric-foot">套餐或运行月化口径</div></article>
             <article class="card"><div class="metric-label">预算占用</div><div class="metric-value" id="budgetUsage">--</div><div class="metric-foot" id="budgetRemaining">--</div></article>
-            <article class="card"><div class="metric-label">免费流量剩余</div><div class="metric-value" id="freeTraffic">--</div><div class="metric-foot" id="freeTrafficFoot">每月前 100 GB 免费</div></article>
+            <article class="card"><div class="metric-label">免费流量剩余</div><div class="metric-value" id="freeTraffic">--</div><div class="metric-foot" id="freeTrafficFoot">按套餐含量计算</div></article>
           </section>
 
           <section class="grid two">
@@ -119,7 +119,7 @@
     </form>
   </dialog>
 
-  <script src="config.js?v=20260528031944"></script>
-  <script src="assets/app.js?v=20260528031944"></script>
+  <script src="config.js?v=20260528043000"></script>
+  <script src="assets/app.js?v=20260528043000"></script>
 </body>
 </html>

@@ -185,7 +185,9 @@ function renderBudget(budget, traffic) {
   setText('budgetUsage', summary.monthly_budget_usd ? pct(summary.normalized_30d_budget_usage_percent) : '--');
   setText('budgetRemaining', summary.monthly_budget_usd ? `${usd(summary.normalized_30d_budget_remaining_usd)} 剩余 / ${usd(summary.monthly_budget_usd)} 预算` : '未设置月预算');
   setText('freeTraffic', `${fmt2.format(traffic.free_remaining_gb)} GB`);
-  setText('freeTrafficFoot', `本月出站 ${fmt2.format(traffic.sent_gb)} / ${fmt2.format(traffic.free_gb)} GB`);
+  const allowanceBasis = pricing.data_transfer_allowance_basis || traffic.allowance_basis || '出站流量';
+  const allowanceUsed = allowanceBasis === '总流量' ? traffic.total_gb : traffic.sent_gb;
+  setText('freeTrafficFoot', `本月${allowanceBasis} ${fmt2.format(allowanceUsed)} / ${fmt2.format(traffic.free_gb)} GB`);
   badge(
     document.getElementById('budgetBadge'),
     !summary.monthly_budget_usd ? 'info' : summary.normalized_30d_budget_usage_percent >= 100 ? 'bad' : summary.normalized_30d_budget_usage_percent >= 80 ? 'warn' : 'ok',
@@ -198,23 +200,38 @@ function renderBudget(budget, traffic) {
   );
   document.getElementById('budgetTable').innerHTML = renderTable(['项目', '计费依据', '本月累计', '月底预测', '30天预测'], costRows);
 
+  const isLightsail = (pricing.billing_model || '').includes('Lightsail');
   const facts = [
+    ['计费模式', pricing.billing_model || '--'],
     ['实例 ID', instance.instance_id],
     ['实例规格', instance.instance_type],
     ['区域 / 可用区', `${instance.region} / ${instance.availability_zone}`],
     ['内网 IP', instance.private_ip],
     ['公网 IP', instance.public_ip || '--'],
     ['启动时间', instance.launched_at ? new Date(instance.launched_at).toLocaleString('zh-CN') : '--'],
-    ['已运行', `${instance.running_hours} 小时`],
-    ['计算单价', `${usd(pricing.instance_hourly_usd)} / 小时`],
-    ['存储单价', `${usd(pricing.storage_gb_month_usd)} / GB-月`],
-    ['公网 IPv4 单价', `${usd(pricing.public_ipv4_hourly_usd)} / 小时`],
-    ['流量规则', `${pricing.data_transfer_free_gb} GB 免费后 ${usd(pricing.data_transfer_gb_usd)} / GB`],
+    ['已运行', `${instance.running_hours} 小时`]
+  ];
+  if (isLightsail) {
+    facts.push(
+      ['Lightsail 套餐', pricing.lightsail_bundle_name || '--'],
+      ['套餐月费', `${usd(pricing.lightsail_bundle_monthly_usd)} / 月`],
+      ['套餐含量', `${fmt2.format(pricing.lightsail_included_disk_gb)} GB SSD / ${fmt2.format(pricing.lightsail_included_transfer_gb)} GB 流量`],
+      ['超额流量单价', `${usd(pricing.data_transfer_gb_usd)} / GB`]
+    );
+  } else {
+    facts.push(
+      ['计算单价', `${usd(pricing.instance_hourly_usd)} / 小时`],
+      ['存储单价', `${usd(pricing.storage_gb_month_usd)} / GB-月`],
+      ['公网 IPv4 单价', `${usd(pricing.public_ipv4_hourly_usd)} / 小时`],
+      ['流量规则', `${pricing.data_transfer_free_gb} GB 免费后 ${usd(pricing.data_transfer_gb_usd)} / GB`]
+    );
+  }
+  facts.push(
     ['本月累计流量', `${fmt2.format(traffic.total_gb)} GB`],
     ['本月出站流量', `${fmt2.format(traffic.sent_gb)} GB`],
     ['计费出站流量', `${fmt2.format(traffic.billable_sent_gb)} GB`],
     ['统计网卡', traffic.interfaces.length ? traffic.interfaces.join(', ') : '--']
-  ];
+  );
   document.getElementById('instanceFacts').innerHTML = facts.map(([name, value]) =>
     `<div class="fact-row"><div class="fact-name">${name}</div><div class="fact-value">${value || '--'}</div></div>`
   ).join('');
