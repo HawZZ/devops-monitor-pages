@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://yoga-agenda-thehun-granny.trycloudflare.com"
+  defaultApiBase: "https://establishing-calls-hitachi-polls.trycloudflare.com"
 };
