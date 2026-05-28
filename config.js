@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://establishing-calls-hitachi-polls.trycloudflare.com"
+  defaultApiBase: "https://increasingly-mirror-improvements-distributions.trycloudflare.com"
 };
