@@ -1,6 +1,8 @@
 const fmt = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1 });
 const fmt2 = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
+const tokenFmt = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
 const usdFmt = new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const usdPreciseFmt = new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'USD', minimumFractionDigits: 4, maximumFractionDigits: 4 });
 let defaultApiBase = normalizeBase((window.MONITOR_CONFIG && window.MONITOR_CONFIG.defaultApiBase) || '');
 const apiBaseKey = 'devops-monitor-api-base';
 const apiBaseManualKey = 'devops-monitor-api-base-manual';
@@ -73,6 +75,17 @@ function usd(n) {
   return Number.isFinite(n) ? usdFmt.format(n) : '--';
 }
 
+function usdPrecise(n) {
+  return Number.isFinite(n) ? usdPreciseFmt.format(n) : '--';
+}
+
+function tokens(n) {
+  if (!Number.isFinite(n)) return '--';
+  if (Math.abs(n) >= 1_000_000) return `${fmt2.format(n / 1_000_000)}M`;
+  if (Math.abs(n) >= 1_000) return `${fmt2.format(n / 1_000)}K`;
+  return tokenFmt.format(n);
+}
+
 function barClass(value) {
   return value >= 90 ? 'red' : value >= 75 ? 'amber' : value >= 55 ? 'violet' : 'green';
 }
@@ -104,6 +117,16 @@ function renderTable(headers, rows) {
   return `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
 function showLogin(message = '') {
   document.getElementById('loginPanel').classList.remove('hidden');
   document.getElementById('appPanel').classList.add('hidden');
@@ -116,9 +139,10 @@ function showApp() {
 }
 
 function setView(view) {
-  const active = view === 'budget' ? 'budget' : 'ops';
+  const active = ['ops', 'budget', 'tokens'].includes(view) ? view : 'ops';
   document.getElementById('viewOps').classList.toggle('active', active === 'ops');
   document.getElementById('viewBudget').classList.toggle('active', active === 'budget');
+  document.getElementById('viewTokens').classList.toggle('active', active === 'tokens');
   document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === active));
   if (location.hash !== `#${active}`) history.replaceState(null, '', `${location.pathname}${location.search}#${active}`);
 }
@@ -237,6 +261,67 @@ function renderBudget(budget, traffic) {
   ).join('');
 }
 
+function renderTokenBilling(tokenBilling = {}) {
+  const summary = tokenBilling.summary || {};
+  const today = tokenBilling.today || {};
+  const rows = tokenBilling.rows || [];
+  const configs = tokenBilling.configs || [];
+  const pricing = tokenBilling.pricing || {};
+  const sources = tokenBilling.sources || [];
+
+  setText('tokenTodayTokens', tokens(summary.today_tokens ?? today.total_tokens));
+  setText('tokenTodayCost', usdPrecise(summary.today_cost_usd ?? today.cost_usd));
+  setText('tokenMonthTokens', tokens(summary.month_tokens ?? summary.total_tokens));
+  setText('tokenMonthCost', usdPrecise(summary.month_cost_usd ?? summary.cost_usd));
+  setText('tokenUnpriced', tokens(summary.month_unpriced_tokens ?? summary.unpriced_tokens));
+  setText('tokenPricingVersion', pricing.version || '--');
+  setText('tokenTodayFoot', `${tokenFmt.format(summary.today_entries || today.entries || 0)} 条记录`);
+  setText('tokenMonthFoot', `${tokenFmt.format(summary.month_entries || summary.entries || 0)} 条记录`);
+
+  badge(
+    document.getElementById('tokenRowsBadge'),
+    rows.length ? 'ok' : 'warn',
+    `${rows.length} 个分组`
+  );
+  const usageRows = rows.map(row => {
+    const month = row.month || {};
+    const day = row.today || {};
+    const priceClass = row.pricing_status === 'priced' ? 'ok' : 'warn';
+    const latest = row.latest_at ? new Date(row.latest_at).toLocaleString('zh-CN') : '--';
+    return `<tr><td>${esc(row.app)}<br><span class="mini">${esc(row.source || '--')} · ${esc(latest)}</span></td><td>${esc(row.model)}<br><span class="mini">${esc(row.provider || '--')} / ${esc(row.pricing_provider || '--')}</span></td><td>${tokens(day.total_tokens || 0)}<br><span class="mini">${usdPrecise(day.cost_usd)}</span></td><td>${tokens(month.total_tokens || 0)}<br><span class="mini">${usdPrecise(month.cost_usd)}</span></td><td><span class="badge ${priceClass}">${esc(row.pricing_key || '--')}</span><br><span class="mini">${esc(row.pricing_note || '--')}</span></td></tr>`;
+  });
+  document.getElementById('tokenUsageTable').innerHTML = renderTable(['应用', '模型', '今日', '本月', '计价'], usageRows);
+
+  const okConfigs = configs.filter(item => item.status === 'ok').length;
+  badge(document.getElementById('tokenConfigBadge'), okConfigs ? 'ok' : 'warn', `${okConfigs}/${configs.length || 0} 已发现`);
+  const configRows = configs.map(item =>
+    `<tr><td>${esc(item.app)}<br><span class="mini">${esc(item.status)}</span></td><td>${esc(item.model || '--')}<br><span class="mini">${esc(item.provider || '--')}</span></td><td>${esc(item.config_path || '--')}<br><span class="mini">${esc(item.usage_path || '--')}</span></td></tr>`
+  );
+  document.getElementById('tokenConfigTable').innerHTML = renderTable(['应用', '当前配置', '路径'], configRows);
+
+  const priceRows = (pricing.models || [])
+    .filter(item => ['gpt-5.5', 'gpt-5.4', 'gpt-5', 'gpt-5-codex', 'claude-sonnet-4.5', 'claude-haiku-4.5'].includes(item.model) || rows.some(row => row.pricing_key === item.model))
+    .map(item =>
+      `<tr><td>${esc(item.model)}<br><span class="mini">${esc(item.provider)}</span></td><td>${priceCell(item.input_usd_per_mtok)}</td><td>${priceCell(item.cached_input_usd_per_mtok)}</td><td>${priceCell(item.output_usd_per_mtok)}</td></tr>`
+    );
+  document.getElementById('tokenPricingTable').innerHTML = renderTable(['模型', 'Input', 'Cached', 'Output'], priceRows);
+  badge(document.getElementById('tokenPricingBadge'), 'info', pricing.unit || 'USD / 1M tokens');
+
+  const sourceText = sources.map(source => `${source.name}: ${source.entries || 0} 条`).join(' / ') || '--';
+  badge(document.getElementById('tokenSourceBadge'), 'info', sourceText);
+  const notes = [
+    ...(tokenBilling.notes || []),
+    ...(pricing.sources || []).map(source => `${source.provider}：${source.url}`)
+  ];
+  document.getElementById('tokenNotes').innerHTML = notes.map(note =>
+    `<div class="rec info"><strong>${esc(note.split('：')[0])}</strong><span>${esc(note.includes('：') ? note.slice(note.indexOf('：') + 1) : note)}</span></div>`
+  ).join('');
+}
+
+function priceCell(value) {
+  return Number.isFinite(value) ? `$${fmt2.format(value)}` : '--';
+}
+
 function render(data) {
   showApp();
   setText('hostname', `${data.hostname} · ${apiBase()}`);
@@ -295,6 +380,7 @@ function render(data) {
   );
   document.getElementById('connections').innerHTML = renderTable(['地址', '状态', '进程/原因'], [...listenerRows, ...riskyRows]);
   renderBudget(data.budget, data.network.monthly);
+  renderTokenBilling(data.token_billing);
 }
 
 async function load() {
@@ -337,7 +423,8 @@ async function loadRuntimeConfig() {
 
 async function init() {
   await loadRuntimeConfig();
-  setView(location.hash === '#budget' ? 'budget' : 'ops');
+  const hashView = (location.hash || '').replace('#', '');
+  setView(['ops', 'budget', 'tokens'].includes(hashView) ? hashView : 'ops');
   await load();
   refreshTimer = setInterval(load, 5000);
 }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DevOps Monitor</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260528110539">
+  <link rel="stylesheet" href="assets/styles.css?v=20260622043200">
 </head>
 <body>
   <div class="shell">
@@ -20,6 +20,7 @@
         <nav class="nav" aria-label="主菜单">
           <button type="button" class="active" data-view="ops">运维监控</button>
           <button type="button" data-view="budget">预算费用</button>
+          <button type="button" data-view="tokens">Token 计费</button>
         </nav>
         <div class="actions">
           <div class="pill"><span class="dot"></span><span id="updated">未连接</span></div>
@@ -102,6 +103,39 @@
             </article>
           </section>
         </section>
+
+        <section id="viewTokens" class="view">
+          <section class="grid budget-kpis">
+            <article class="card"><div class="metric-label">今日 Token</div><div class="metric-value" id="tokenTodayTokens">--</div><div class="metric-foot" id="tokenTodayFoot">--</div></article>
+            <article class="card"><div class="metric-label">今日费用</div><div class="metric-value" id="tokenTodayCost">--</div><div class="metric-foot">官方单价估算</div></article>
+            <article class="card"><div class="metric-label">本月 Token</div><div class="metric-value" id="tokenMonthTokens">--</div><div class="metric-foot" id="tokenMonthFoot">--</div></article>
+            <article class="card"><div class="metric-label">本月费用</div><div class="metric-value" id="tokenMonthCost">--</div><div class="metric-foot">USD</div></article>
+            <article class="card"><div class="metric-label">未计价 Token</div><div class="metric-value" id="tokenUnpriced">--</div><div class="metric-foot">未匹配官方单价</div></article>
+            <article class="card"><div class="metric-label">价格表版本</div><div class="metric-value" id="tokenPricingVersion">--</div><div class="metric-foot">OpenAI 优先口径</div></article>
+          </section>
+
+          <section class="grid two">
+            <article class="card">
+              <div class="section-title"><h2>按应用统计</h2><span class="badge info" id="tokenRowsBadge">--</span></div>
+              <div id="tokenUsageTable"></div>
+            </article>
+            <article class="card">
+              <div class="section-title"><h2>配置扫描</h2><span class="badge" id="tokenConfigBadge">--</span></div>
+              <div id="tokenConfigTable"></div>
+            </article>
+          </section>
+
+          <section class="grid two">
+            <article class="card">
+              <div class="section-title"><h2>价格表</h2><span class="badge violet" id="tokenPricingBadge">--</span></div>
+              <div id="tokenPricingTable"></div>
+            </article>
+            <article class="card">
+              <div class="section-title"><h2>统计口径</h2><span class="badge info" id="tokenSourceBadge">--</span></div>
+              <div class="recommendations" id="tokenNotes"></div>
+            </article>
+          </section>
+        </section>
       </section>
     </main>
   </div>
@@ -119,7 +153,7 @@
     </form>
   </dialog>
 
-  <script src="config.js?v=20260528110539"></script>
-  <script src="assets/app.js?v=20260528110539"></script>
+  <script src="config.js?v=20260622043200"></script>
+  <script src="assets/app.js?v=20260622043200"></script>
 </body>
 </html>
