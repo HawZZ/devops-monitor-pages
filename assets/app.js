@@ -114,7 +114,7 @@ function resourceRow(name, value, foot, percent) {
 
 function renderTable(headers, rows) {
   if (!rows.length) return '<div class="empty">暂无数据</div>';
-  return `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  return `<div class="table-wrap"><table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
 }
 
 function esc(value) {
