@@ -13,3 +13,21 @@ The backend must:
 - use `MONITOR_COOKIE_SAMESITE=none` and `MONITOR_COOKIE_SECURE=true`.
 
 Without a custom domain, Cloudflare Quick Tunnel URLs can change. Use the settings button in the page to update the backend URL, or update `config.js` and redeploy.
+
+## Local preview
+
+```bash
+npm install
+npm run preview
+```
+
+Open <http://127.0.0.1:8088/>.
+
+## Playwright screenshot
+
+```bash
+npm install
+npm run screenshot
+```
+
+By default this starts a temporary local server and writes `/tmp/devops-login-desktop.png`.

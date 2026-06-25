@@ -278,6 +278,17 @@ function renderTokenBilling(tokenBilling = {}) {
   setText('tokenTodayFoot', `${tokenFmt.format(summary.today_entries || today.entries || 0)} 条记录`);
   setText('tokenMonthFoot', `${tokenFmt.format(summary.month_entries || summary.entries || 0)} 条记录`);
 
+  const accountRows = summarizeTokenAccounts(rows);
+  badge(
+    document.getElementById('tokenAccountBadge'),
+    accountRows.length ? 'ok' : 'warn',
+    `${accountRows.length} 个账号`
+  );
+  const accountTableRows = accountRows.map(item =>
+    `<tr><td>${esc(item.account)}<br><span class="mini">${esc(item.apps.join(', ') || '--')}</span></td><td>${tokens(item.today_tokens)}<br><span class="mini">${usdPrecise(item.today_cost_usd)}</span></td><td>${tokens(item.month_tokens)}<br><span class="mini">${usdPrecise(item.month_cost_usd)}</span></td><td>${esc(item.providers.join(', ') || '--')}</td></tr>`
+  );
+  document.getElementById('tokenAccountTable').innerHTML = renderTable(['账号/Profile', '今日', '本月', 'Provider'], accountTableRows);
+
   badge(
     document.getElementById('tokenRowsBadge'),
     rows.length ? 'ok' : 'warn',
@@ -288,16 +299,16 @@ function renderTokenBilling(tokenBilling = {}) {
     const day = row.today || {};
     const priceClass = row.pricing_status === 'priced' ? 'ok' : 'warn';
     const latest = row.latest_at ? new Date(row.latest_at).toLocaleString('zh-CN') : '--';
-    return `<tr><td>${esc(row.app)}<br><span class="mini">${esc(row.source || '--')} · ${esc(latest)}</span></td><td>${esc(row.model)}<br><span class="mini">${esc(row.provider || '--')} / ${esc(row.pricing_provider || '--')}</span></td><td>${tokens(day.total_tokens || 0)}<br><span class="mini">${usdPrecise(day.cost_usd)}</span></td><td>${tokens(month.total_tokens || 0)}<br><span class="mini">${usdPrecise(month.cost_usd)}</span></td><td><span class="badge ${priceClass}">${esc(row.pricing_key || '--')}</span><br><span class="mini">${esc(row.pricing_note || '--')}</span></td></tr>`;
+    return `<tr><td>${esc(row.app)}<br><span class="mini">${esc(row.source || '--')} · ${esc(latest)}</span></td><td>${esc(row.account || row.provider || '--')}</td><td>${esc(row.model)}<br><span class="mini">${esc(row.provider || '--')} / ${esc(row.pricing_provider || '--')}</span></td><td>${tokens(day.total_tokens || 0)}<br><span class="mini">${usdPrecise(day.cost_usd)}</span></td><td>${tokens(month.total_tokens || 0)}<br><span class="mini">${usdPrecise(month.cost_usd)}</span></td><td><span class="badge ${priceClass}">${esc(row.pricing_key || '--')}</span><br><span class="mini">${esc(row.pricing_note || '--')}</span></td></tr>`;
   });
-  document.getElementById('tokenUsageTable').innerHTML = renderTable(['应用', '模型', '今日', '本月', '计价'], usageRows);
+  document.getElementById('tokenUsageTable').innerHTML = renderTable(['应用', '账号/Profile', '模型', '今日', '本月', '计价'], usageRows);
 
   const okConfigs = configs.filter(item => item.status === 'ok').length;
   badge(document.getElementById('tokenConfigBadge'), okConfigs ? 'ok' : 'warn', `${okConfigs}/${configs.length || 0} 已发现`);
   const configRows = configs.map(item =>
-    `<tr><td>${esc(item.app)}<br><span class="mini">${esc(item.status)}</span></td><td>${esc(item.model || '--')}<br><span class="mini">${esc(item.provider || '--')}</span></td><td>${esc(item.config_path || '--')}<br><span class="mini">${esc(item.usage_path || '--')}</span></td></tr>`
+    `<tr><td>${esc(item.app)}<br><span class="mini">${esc(item.status)}</span></td><td>${esc(item.account || '--')}<br><span class="mini">${esc(item.provider || '--')}</span></td><td>${esc(item.model || '--')}</td><td>${esc(item.config_path || '--')}<br><span class="mini">${esc(item.usage_path || '--')}</span></td></tr>`
   );
-  document.getElementById('tokenConfigTable').innerHTML = renderTable(['应用', '当前配置', '路径'], configRows);
+  document.getElementById('tokenConfigTable').innerHTML = renderTable(['应用', '账号/Profile', '模型', '路径'], configRows);
 
   const priceRows = (pricing.models || [])
     .filter(item => ['gpt-5.5', 'gpt-5.4', 'gpt-5', 'gpt-5-codex', 'claude-sonnet-4.5', 'claude-haiku-4.5'].includes(item.model) || rows.some(row => row.pricing_key === item.model))
@@ -316,6 +327,41 @@ function renderTokenBilling(tokenBilling = {}) {
   document.getElementById('tokenNotes').innerHTML = notes.map(note =>
     `<div class="rec info"><strong>${esc(note.split('：')[0])}</strong><span>${esc(note.includes('：') ? note.slice(note.indexOf('：') + 1) : note)}</span></div>`
   ).join('');
+}
+
+function summarizeTokenAccounts(rows) {
+  const summaries = new Map();
+  for (const row of rows) {
+    const account = row.account || row.provider || 'unknown';
+    if (!summaries.has(account)) {
+      summaries.set(account, {
+        account,
+        apps: new Set(),
+        providers: new Set(),
+        today_tokens: 0,
+        today_cost_usd: 0,
+        month_tokens: 0,
+        month_cost_usd: 0
+      });
+    }
+    const item = summaries.get(account);
+    if (row.app) item.apps.add(row.app);
+    if (row.provider) item.providers.add(row.provider);
+    if (row.pricing_provider) item.providers.add(row.pricing_provider);
+    const today = row.today || {};
+    const month = row.month || {};
+    item.today_tokens += Number(today.total_tokens || 0);
+    item.today_cost_usd += Number(today.cost_usd || 0);
+    item.month_tokens += Number(month.total_tokens || 0);
+    item.month_cost_usd += Number(month.cost_usd || 0);
+  }
+  return [...summaries.values()]
+    .map(item => ({
+      ...item,
+      apps: [...item.apps].sort(),
+      providers: [...item.providers].sort()
+    }))
+    .sort((a, b) => (b.month_cost_usd - a.month_cost_usd) || (b.month_tokens - a.month_tokens));
 }
 
 function priceCell(value) {
