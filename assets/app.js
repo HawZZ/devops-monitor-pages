@@ -268,6 +268,7 @@ function renderTokenBilling(tokenBilling = {}) {
   const configs = tokenBilling.configs || [];
   const pricing = tokenBilling.pricing || {};
   const sources = tokenBilling.sources || [];
+  const balances = tokenBilling.balances || {};
 
   setText('tokenTodayTokens', tokens(summary.today_tokens ?? today.total_tokens));
   setText('tokenTodayCost', usdPrecise(summary.today_cost_usd ?? today.cost_usd));
@@ -278,16 +279,16 @@ function renderTokenBilling(tokenBilling = {}) {
   setText('tokenTodayFoot', `${tokenFmt.format(summary.today_entries || today.entries || 0)} 条记录`);
   setText('tokenMonthFoot', `${tokenFmt.format(summary.month_entries || summary.entries || 0)} 条记录`);
 
-  const accountRows = summarizeTokenAccounts(rows);
+  const accountRows = summarizeTokenAccounts(rows, balances);
   badge(
     document.getElementById('tokenAccountBadge'),
     accountRows.length ? 'ok' : 'warn',
     `${accountRows.length} 个账号`
   );
   const accountTableRows = accountRows.map(item =>
-    `<tr><td>${esc(item.account)}<br><span class="mini">${esc(item.apps.join(', ') || '--')}</span></td><td>${tokens(item.today_tokens)}<br><span class="mini">${usdPrecise(item.today_cost_usd)}</span></td><td>${tokens(item.month_tokens)}<br><span class="mini">${usdPrecise(item.month_cost_usd)}</span></td><td>${esc(item.providers.join(', ') || '--')}</td></tr>`
+    `<tr><td>${esc(item.account)}<br><span class="mini">${esc(item.apps.join(', ') || '--')}</span></td><td>${balanceText(item.balance)}</td><td>${tokens(item.today_tokens)}<br><span class="mini">${usdPrecise(item.today_cost_usd)}</span></td><td>${tokens(item.month_tokens)}<br><span class="mini">${usdPrecise(item.month_cost_usd)}</span></td><td>${esc(item.providers.join(', ') || '--')}</td></tr>`
   );
-  document.getElementById('tokenAccountTable').innerHTML = renderTable(['账号/Profile', '今日', '本月', 'Provider'], accountTableRows);
+  document.getElementById('tokenAccountTable').innerHTML = renderTable(['账号/Profile', '余额', '今日', '本月', 'Provider'], accountTableRows);
 
   badge(
     document.getElementById('tokenRowsBadge'),
@@ -306,9 +307,9 @@ function renderTokenBilling(tokenBilling = {}) {
   const okConfigs = configs.filter(item => item.status === 'ok').length;
   badge(document.getElementById('tokenConfigBadge'), okConfigs ? 'ok' : 'warn', `${okConfigs}/${configs.length || 0} 已发现`);
   const configRows = configs.map(item =>
-    `<tr><td>${esc(item.app)}<br><span class="mini">${esc(item.status)}</span></td><td>${esc(item.account || '--')}<br><span class="mini">${esc(item.provider || '--')}</span></td><td>${esc(item.model || '--')}</td><td>${esc(item.config_path || '--')}<br><span class="mini">${esc(item.usage_path || '--')}</span></td></tr>`
+    `<tr><td>${esc(item.app)}<br><span class="mini">${esc(item.status)}</span></td><td>${esc(item.account || '--')}<br><span class="mini">${esc(item.provider || '--')}</span></td><td>${balanceText(item.balance)}</td><td>${esc(item.model || '--')}</td><td>${esc(item.config_path || '--')}<br><span class="mini">${esc(item.usage_path || '--')}</span></td></tr>`
   );
-  document.getElementById('tokenConfigTable').innerHTML = renderTable(['应用', '账号/Profile', '模型', '路径'], configRows);
+  document.getElementById('tokenConfigTable').innerHTML = renderTable(['应用', '账号/Profile', '余额', '模型', '路径'], configRows);
 
   const priceRows = (pricing.models || [])
     .filter(item => ['gpt-5.5', 'gpt-5.4', 'gpt-5', 'gpt-5-codex', 'claude-sonnet-4.5', 'claude-haiku-4.5'].includes(item.model) || rows.some(row => row.pricing_key === item.model))
@@ -329,7 +330,7 @@ function renderTokenBilling(tokenBilling = {}) {
   ).join('');
 }
 
-function summarizeTokenAccounts(rows) {
+function summarizeTokenAccounts(rows, balances = {}) {
   const summaries = new Map();
   for (const row of rows) {
     const account = row.account || row.provider || 'unknown';
@@ -341,10 +342,12 @@ function summarizeTokenAccounts(rows) {
         today_tokens: 0,
         today_cost_usd: 0,
         month_tokens: 0,
-        month_cost_usd: 0
+        month_cost_usd: 0,
+        balance: balances[account] || {}
       });
     }
     const item = summaries.get(account);
+    if (!item.balance && balances[account]) item.balance = balances[account];
     if (row.app) item.apps.add(row.app);
     if (row.provider) item.providers.add(row.provider);
     if (row.pricing_provider) item.providers.add(row.pricing_provider);
@@ -362,6 +365,15 @@ function summarizeTokenAccounts(rows) {
       providers: [...item.providers].sort()
     }))
     .sort((a, b) => (b.month_cost_usd - a.month_cost_usd) || (b.month_tokens - a.month_tokens));
+}
+
+function balanceText(balance = {}) {
+  if (!balance || balance.remaining === undefined || balance.remaining === null || balance.remaining === '') return '';
+  const numeric = Number(balance.remaining);
+  const unit = balance.unit || 'USD';
+  const value = Number.isFinite(numeric) ? fmt2.format(numeric) : String(balance.remaining);
+  const status = balance.is_valid === false ? '不可用' : '可用';
+  return `${unit === 'USD' ? '$' : ''}${esc(value)} ${esc(unit === 'USD' ? '' : unit)}<br><span class="mini">${status}</span>`;
 }
 
 function priceCell(value) {
