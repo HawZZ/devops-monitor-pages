@@ -332,6 +332,18 @@ function renderTokenBilling(tokenBilling = {}) {
 
 function summarizeTokenAccounts(rows, balances = {}) {
   const summaries = new Map();
+  for (const [account, balance] of Object.entries(balances)) {
+    summaries.set(account, {
+      account,
+      apps: new Set(['Profile']),
+      providers: new Set(),
+      today_tokens: 0,
+      today_cost_usd: 0,
+      month_tokens: 0,
+      month_cost_usd: 0,
+      balance: balance || {}
+    });
+  }
   for (const row of rows) {
     const account = row.account || row.provider || 'unknown';
     if (!summaries.has(account)) {
@@ -347,7 +359,8 @@ function summarizeTokenAccounts(rows, balances = {}) {
       });
     }
     const item = summaries.get(account);
-    if (!item.balance && balances[account]) item.balance = balances[account];
+    if (balances[account]) item.balance = balances[account];
+    item.apps.delete('Profile');
     if (row.app) item.apps.add(row.app);
     if (row.provider) item.providers.add(row.provider);
     if (row.pricing_provider) item.providers.add(row.pricing_provider);
