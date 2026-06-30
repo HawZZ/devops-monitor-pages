@@ -127,6 +127,13 @@ function esc(value) {
   }[char]));
 }
 
+function keyCountText(items) {
+  const entries = Array.isArray(items)
+    ? items.map(item => [item.prefix || item.port || item.name || '--', item.count])
+    : Object.entries(items || {});
+  return entries.length ? entries.map(([key, count]) => `${key}:${count}`).join(' / ') : '--';
+}
+
 function showLogin(message = '') {
   document.getElementById('loginPanel').classList.remove('hidden');
   document.getElementById('appPanel').classList.add('hidden');
@@ -491,13 +498,19 @@ function render(data) {
   setText('monthlyTrafficFoot', `出站 ${fmt2.format(data.network.monthly.sent_gb)} GB · 免费剩余 ${fmt2.format(data.network.monthly.free_remaining_gb)} GB`);
   setText('safeValue', fmt.format(data.connections.safe_count));
   setText('riskValue', fmt.format(data.connections.risk_count));
+  setText('riskFoot', keyCountText(data.connections.risk_by_status || {}));
   setText('bandwidthBase', `${data.settings.bandwidth_mbps} Mbps 基准`);
   setText('trafficPlan', `${fmt2.format(data.network.monthly.free_remaining_gb)} GB 免费剩余`);
 
+  const swapFoot = data.memory.swap_total
+    ? data.memory.swap_active
+      ? `活跃换页 in ${rate(data.memory.swap_in_bps || 0)} · out ${rate(data.memory.swap_out_bps || 0)}`
+      : `${bytes(data.memory.swap_used)} / ${bytes(data.memory.swap_total)} · 暂无活跃换页`
+    : '未启用 Swap';
   const rows = [
     resourceRow('CPU 使用率', pct(data.cpu.percent), `1分钟负载比 ${data.cpu.load.ratio_one}`, data.cpu.percent),
     resourceRow('内存使用率', pct(data.memory.percent), `${bytes(data.memory.available)} 可用`, data.memory.percent),
-    resourceRow('Swap 使用率', pct(data.memory.swap_percent), `${bytes(data.memory.swap_used)} / ${bytes(data.memory.swap_total)}`, data.memory.swap_percent),
+    resourceRow('Swap 使用率', pct(data.memory.swap_percent), swapFoot, data.memory.swap_percent),
     resourceRow('带宽占用率', pct(data.network.total.bandwidth_utilization_percent), `${fmt2.format(data.network.total.projected_monthly_gb)} GB/月估算`, data.network.total.bandwidth_utilization_percent),
     resourceRow('免费流量额度', pct(data.network.monthly.free_usage_percent), `本月出站 ${fmt2.format(data.network.monthly.sent_gb)} / ${fmt2.format(data.network.monthly.free_gb)} GB`, data.network.monthly.free_usage_percent)
   ];
@@ -526,10 +539,18 @@ function render(data) {
   const listenerRows = data.connections.listeners.slice(0, 6).map(l =>
     `<tr><td>${l.address}</td><td><span class="badge ${l.risk ? 'bad' : 'info'}">${l.reason}</span></td><td>${l.process || '--'}</td></tr>`
   );
+  const summaryRows = [
+    data.connections.risk_count
+      ? `<tr><td>风险状态分布</td><td><span class="badge warn">${esc(keyCountText(data.connections.risk_by_status || {}))}</span></td><td>用于区分半连接、已建立连接和关闭等待。</td></tr>`
+      : '',
+    (data.connections.risk_top_prefixes || []).length
+      ? `<tr><td>主要来源网段</td><td><span class="badge warn">${esc(keyCountText(data.connections.risk_top_prefixes))}</span></td><td>IPv4 按 /24 聚合，IPv6 按 /64 聚合。</td></tr>`
+      : ''
+  ].filter(Boolean);
   const riskyRows = data.connections.risky.slice(0, 6).map(c =>
-    `<tr><td>${c.remote}</td><td><span class="badge warn">${c.status}</span></td><td>${c.local} · ${c.reasons.join('、')}</td></tr>`
+    `<tr><td>${esc(c.remote)}</td><td><span class="badge warn">${esc(c.status)}</span></td><td>${esc(c.local)} · ${esc(c.reasons.join('、'))}</td></tr>`
   );
-  document.getElementById('connections').innerHTML = renderTable(['地址', '状态', '进程/原因'], [...listenerRows, ...riskyRows]);
+  document.getElementById('connections').innerHTML = renderTable(['项目/地址', '状态', '进程/原因'], [...summaryRows, ...listenerRows, ...riskyRows]);
   renderBudget(data.budget, data.network.monthly);
   renderTokenBilling(data.token_billing);
   renderKanban(data.kanban || {});
