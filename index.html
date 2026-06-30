@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DevOps Monitor</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260623085822">
+  <link rel="stylesheet" href="assets/styles.css?v=20260630000100">
 </head>
 <body>
   <div class="shell">
@@ -21,6 +21,7 @@
           <button type="button" class="active" data-view="ops">运维监控</button>
           <button type="button" data-view="budget">预算费用</button>
           <button type="button" data-view="tokens">Token 计费</button>
+          <button type="button" data-view="kanban">Hermes Kanban</button>
         </nav>
         <div class="actions">
           <div class="pill"><span class="dot"></span><span id="updated">未连接</span></div>
@@ -143,6 +144,28 @@
             </article>
           </section>
         </section>
+
+        <section id="viewKanban" class="view">
+          <section class="grid budget-kpis">
+            <article class="card"><div class="metric-label">总任务</div><div class="metric-value" id="kanbanTotal">--</div><div class="metric-foot" id="kanbanTotalFoot">--</div></article>
+            <article class="card"><div class="metric-label">开放任务</div><div class="metric-value" id="kanbanOpen">--</div><div class="metric-foot">待处理 / 进行中</div></article>
+            <article class="card"><div class="metric-label">进行中</div><div class="metric-value" id="kanbanActive">--</div><div class="metric-foot">ready / running</div></article>
+            <article class="card"><div class="metric-label">阻塞</div><div class="metric-value" id="kanbanBlocked">--</div><div class="metric-foot">blocked</div></article>
+            <article class="card"><div class="metric-label">已完成</div><div class="metric-value" id="kanbanDone">--</div><div class="metric-foot">done</div></article>
+            <article class="card"><div class="metric-label">数据源</div><div class="metric-value" id="kanbanSource">--</div><div class="metric-foot" id="kanbanBoard">--</div></article>
+          </section>
+
+          <section class="grid two">
+            <article class="card">
+              <div class="section-title"><h2>状态分布</h2><span class="badge info" id="kanbanStatusBadge">--</span></div>
+              <div class="stack" id="kanbanStatusRows"></div>
+            </article>
+            <article class="card">
+              <div class="section-title"><h2>最近任务</h2><span class="badge info" id="kanbanRecentBadge">--</span></div>
+              <div id="kanbanRecentTable"></div>
+            </article>
+          </section>
+        </section>
       </section>
     </main>
   </div>
@@ -160,7 +183,7 @@
     </form>
   </dialog>
 
-  <script src="config.js?v=20260623085822"></script>
-  <script src="assets/app.js?v=20260629000200"></script>
+  <script src="config.js?v=20260630000100"></script>
+  <script src="assets/app.js?v=20260630000100"></script>
 </body>
 </html>

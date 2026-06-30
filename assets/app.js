@@ -139,10 +139,11 @@ function showApp() {
 }
 
 function setView(view) {
-  const active = ['ops', 'budget', 'tokens'].includes(view) ? view : 'ops';
+  const active = ['ops', 'budget', 'tokens', 'kanban'].includes(view) ? view : 'ops';
   document.getElementById('viewOps').classList.toggle('active', active === 'ops');
   document.getElementById('viewBudget').classList.toggle('active', active === 'budget');
   document.getElementById('viewTokens').classList.toggle('active', active === 'tokens');
+  document.getElementById('viewKanban').classList.toggle('active', active === 'kanban');
   document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === active));
   if (location.hash !== `#${active}`) history.replaceState(null, '', `${location.pathname}${location.search}#${active}`);
 }
@@ -330,6 +331,85 @@ function renderTokenBilling(tokenBilling = {}) {
   ).join('');
 }
 
+function kanbanStatusLabel(status) {
+  return ({
+    triage: '分诊',
+    todo: '待办',
+    scheduled: '已排期',
+    ready: '就绪',
+    running: '运行中',
+    blocked: '阻塞',
+    review: '评审',
+    done: '完成',
+    archived: '归档'
+  }[status] || status || '--');
+}
+
+function kanbanStatusClass(status) {
+  return ({
+    triage: 'warn',
+    todo: 'info',
+    scheduled: 'violet',
+    ready: 'ok',
+    running: 'warn',
+    blocked: 'bad',
+    review: 'violet',
+    done: 'ok',
+    archived: 'info'
+  }[status] || 'info');
+}
+
+function renderKanban(kanban = {}) {
+  const board = kanban.board || {};
+  const summary = kanban.summary || {};
+  const statusCounts = board.status_counts || {};
+  const recent = kanban.recent_tasks || [];
+  const total = Number(summary.total_tasks ?? board.total_tasks ?? 0);
+  const open = Number(summary.open_tasks ?? board.open_tasks ?? 0);
+  const active = Number(summary.active_tasks ?? board.active_tasks ?? 0);
+  const blocked = Number(summary.blocked_tasks ?? board.blocked_tasks ?? 0);
+  const done = Number(summary.done_tasks ?? board.done_tasks ?? 0);
+
+  setText('kanbanTotal', tokens(total));
+  setText('kanbanTotalFoot', kanban.status === 'ok' ? `${recent.length} 条最近任务` : '暂无可读数据');
+  setText('kanbanOpen', tokens(open));
+  setText('kanbanActive', tokens(active));
+  setText('kanbanBlocked', tokens(blocked));
+  setText('kanbanDone', tokens(done));
+  setText('kanbanSource', kanban.status === 'ok' ? 'SQLite' : '离线');
+  setText('kanbanBoard', [board.slug, board.path || kanban.source_path].filter(Boolean).join(' · ') || '--');
+
+  const statusEntries = Object.entries(statusCounts)
+    .filter(([, count]) => Number(count) > 0)
+    .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
+  badge(
+    document.getElementById('kanbanStatusBadge'),
+    total ? 'ok' : 'warn',
+    statusEntries.length ? `${statusEntries.length} 状态` : '无任务'
+  );
+  const statusRows = statusEntries.length ? statusEntries.map(([status, count]) =>
+    resourceRow(
+      kanbanStatusLabel(status),
+      tokens(Number(count)),
+      `${pct(total ? Number(count) / total * 100 : 0)} · ${status}`,
+      total ? Number(count) / total * 100 : 0,
+    )
+  ) : ['<div class="empty">暂无任务</div>'];
+  document.getElementById('kanbanStatusRows').innerHTML = statusRows.join('');
+
+  badge(
+    document.getElementById('kanbanRecentBadge'),
+    recent.length ? 'ok' : 'warn',
+    recent.length ? `${recent.length} 条` : '无任务'
+  );
+  const recentRows = recent.map(item => {
+    const latest = item.latest_at ? new Date(Number(item.latest_at) * 1000).toLocaleString('zh-CN') : '--';
+    const statusClass = kanbanStatusClass(item.status);
+    return `<tr><td>${esc(item.title)}<br><span class="mini">${esc(item.id)} · ${esc(item.workspace_kind || '--')} · ${esc(item.tenant || '--')}</span></td><td><span class="badge ${statusClass}">${esc(kanbanStatusLabel(item.status))}</span></td><td>${esc(item.assignee || '--')}</td><td>${esc(item.summary || '--')}<br><span class="mini">${item.comment_count || 0} 评论 · ${item.run_count || 0} 运行 · ${esc(latest)}</span></td></tr>`;
+  });
+  document.getElementById('kanbanRecentTable').innerHTML = renderTable(['任务', '状态', '负责人', '详情'], recentRows);
+}
+
 function summarizeTokenAccounts(rows, balances = {}) {
   const summaries = new Map();
   for (const [account, balance] of Object.entries(balances)) {
@@ -452,6 +532,7 @@ function render(data) {
   document.getElementById('connections').innerHTML = renderTable(['地址', '状态', '进程/原因'], [...listenerRows, ...riskyRows]);
   renderBudget(data.budget, data.network.monthly);
   renderTokenBilling(data.token_billing);
+  renderKanban(data.kanban || {});
 }
 
 async function load() {
@@ -495,7 +576,7 @@ async function loadRuntimeConfig() {
 async function init() {
   await loadRuntimeConfig();
   const hashView = (location.hash || '').replace('#', '');
-  setView(['ops', 'budget', 'tokens'].includes(hashView) ? hashView : 'ops');
+  setView(['ops', 'budget', 'tokens', 'kanban'].includes(hashView) ? hashView : 'ops');
   await load();
   refreshTimer = setInterval(load, 5000);
 }
