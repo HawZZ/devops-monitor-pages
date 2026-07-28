@@ -320,11 +320,11 @@ function renderTokenBilling(tokenBilling = {}) {
   document.getElementById('tokenConfigTable').innerHTML = renderTable(['应用', '账号/Profile', '余额', '模型', '路径'], configRows);
 
   const priceRows = (pricing.models || [])
-    .filter(item => ['gpt-5.5', 'gpt-5.4', 'gpt-5', 'gpt-5-codex', 'claude-sonnet-4.5', 'claude-haiku-4.5'].includes(item.model) || rows.some(row => row.pricing_key === item.model))
+    .filter(item => ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.4', 'gpt-5', 'gpt-5-codex', 'claude-sonnet-4.5', 'claude-haiku-4.5'].includes(item.model) || rows.some(row => row.pricing_key === item.model))
     .map(item =>
-      `<tr><td>${esc(item.model)}<br><span class="mini">${esc(item.provider)}</span></td><td>${priceCell(item.input_usd_per_mtok)}</td><td>${priceCell(item.cached_input_usd_per_mtok)}</td><td>${priceCell(item.output_usd_per_mtok)}</td></tr>`
+      `<tr><td>${esc(item.model)}<br><span class="mini">${esc(item.provider)}</span></td><td>${priceCell(item.input_usd_per_mtok)}</td><td>${priceCell(item.cached_input_usd_per_mtok)}</td><td>${priceCell(item.cache_write_usd_per_mtok)}</td><td>${priceCell(item.output_usd_per_mtok)}</td></tr>`
     );
-  document.getElementById('tokenPricingTable').innerHTML = renderTable(['模型', 'Input', 'Cached', 'Output'], priceRows);
+  document.getElementById('tokenPricingTable').innerHTML = renderTable(['模型', 'Input', 'Cached', 'Cache write', 'Output'], priceRows);
   badge(document.getElementById('tokenPricingBadge'), 'info', pricing.unit || 'USD / 1M tokens');
 
   const sourceText = sources.map(source => `${source.name}: ${source.entries || 0} 条`).join(' / ') || '--';
