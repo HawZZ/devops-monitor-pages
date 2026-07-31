@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://language-prerequisite-cam-minimum.trycloudflare.com"
+  defaultApiBase: "https://home-tar-listing-defining.trycloudflare.com"
 };
