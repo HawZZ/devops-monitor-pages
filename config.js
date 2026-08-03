@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://home-tar-listing-defining.trycloudflare.com"
+  defaultApiBase: "https://continues-exclude-rest-senators.trycloudflare.com"
 };
