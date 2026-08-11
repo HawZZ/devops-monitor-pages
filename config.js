@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://continues-exclude-rest-senators.trycloudflare.com"
+  defaultApiBase: "https://disturbed-profession-burner-mall.trycloudflare.com"
 };
