@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://disturbed-profession-burner-mall.trycloudflare.com"
+  defaultApiBase: "https://zones-slightly-taken-browsers.trycloudflare.com"
 };
