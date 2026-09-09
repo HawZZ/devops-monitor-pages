@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://zones-slightly-taken-browsers.trycloudflare.com"
+  defaultApiBase: "https://subscription-orange-pages-played.trycloudflare.com"
 };
