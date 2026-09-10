@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://subscription-orange-pages-played.trycloudflare.com"
+  defaultApiBase: "https://billy-goals-covering-models.trycloudflare.com"
 };
