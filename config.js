@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://valuable-gilbert-analyzed-jay.trycloudflare.com"
+  defaultApiBase: "https://break-questions-star-superb.trycloudflare.com"
 };
