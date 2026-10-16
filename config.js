@@ -1,3 +1,3 @@
 window.MONITOR_CONFIG = {
-  defaultApiBase: "https://hunt-wiki-towers-atom.trycloudflare.com"
+  defaultApiBase: "https://valuable-gilbert-analyzed-jay.trycloudflare.com"
 };
